@@ -1,0 +1,16 @@
+{
+  "name": "now-shadow-cljs-node",
+  "version": "0.0.14",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jntn/now-shadow-cljs-node.git"
+  },
+  "dependencies": {
+    "@now/node-bridge": "^0.1.11-canary.0",
+    "fs-extra": "7.0.1",
+    "tar": "^4.4.8",
+    "node-fetch": "^2.3.0",
+    "execa": "^1.0.0"
+  }
+}
