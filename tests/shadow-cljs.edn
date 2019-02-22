@@ -1,0 +1,24 @@
+{:source-paths ["src"]
+
+ :dependencies [[reagent "0.8.1"]
+                [cider/cider-nrepl "0.17.0"]
+                [binaryage/devtools "0.9.10"]
+                [cljs-http "0.1.45"]]
+
+ :builds {:haikus {:target :node-library
+                   :output-to "api/haikus/index.js"
+                   :output-dir "api/haikus"
+                   :exports-var jntn.api.haikus/handler}
+          :app {:target :browser
+                :build-hooks
+                [(jntn.app.utils/hook)]
+                :output-dir "public/js"
+                :asset-path "js"
+                :module-hash-names true
+                :modules {:main {:entries [jntn.app.core]}}
+                :devtools {:http-root "public"
+                           :proxy-url "http://localhost:3000"
+                           :http-port 8000}}
+          :test {:target :node-test
+                 :output-to "test/node-tests.js"
+                 :autorun true}}}

@@ -1,21 +1,29 @@
+/* eslint-disable implicit-arrow-linebreak */
+/* eslint-disable comma-dangle  */
+/* eslint-disable ßfunction-paren-newline */
+/* eslint-disable no-param-reassign */
+
 const { createLambda } = require('@now/build-utils/lambda.js');
 const download = require('@now/build-utils/fs/download.js');
 const FileBlob = require('@now/build-utils/file-blob.js');
 const FileFsRef = require('@now/build-utils/file-fs-ref.js');
-const fs = require('fs-extra');
 const glob = require('@now/build-utils/fs/glob.js');
+const { runNpmInstall } = require('@now/build-utils/fs/run-user-scripts.js');
+const nodeBridge = require('@now/node-bridge');
 
+const fs = require('fs-extra');
 const execa = require('execa');
 const path = require('path');
 const tar = require('tar');
 const fetch = require('node-fetch');
-const { runNpmInstall } = require('@now/build-utils/fs/run-user-scripts.js');
+
+const parseConfigFile = require('./parse-config-file');
 
 const javaUrl =
   'https://d2znqt9b1bc64u.cloudfront.net/amazon-corretto-8.202.08.2-linux-x64.tar.gz';
 
 async function installJava() {
-  console.log('downloading java');
+  console.log('Downloading java...');
   const res = await fetch(javaUrl);
 
   if (!res.ok) {
@@ -45,45 +53,16 @@ async function downloadFiles(files, entrypoint, workPath) {
   console.log('Downloading files...');
   const downloadedFiles = await download(files, workPath);
   const entryPath = downloadedFiles[entrypoint].fsPath;
+
   return { files: downloadedFiles, entryPath };
 }
 
-exports.build = async ({ files, entrypoint, workPath } = {}) => {
-  const { HOME, PATH } = process.env;
-  console.log(process.env);
-  const { files: downloadedFiles, entryPath } = await downloadFiles(
-    files,
-    entrypoint,
-    workPath
+async function createLambdaForNode(buildConfig, lambdas, entrypointDirname) {
+  console.log(
+    `Creating lambda for ${buildConfig.name} (${buildConfig.target})`
   );
-  await installJava();
-  await installDependencies(downloadedFiles, workPath);
-
-  const entrypointDirname = path.dirname(downloadedFiles[entrypoint].fsPath);
-
-  try {
-    await execa('npx', ['shadow-cljs', 'release', 'haikus'], {
-      env: {
-        JAVA_HOME: HOME + '/amazon-corretto-8.202.08.2-linux-x64',
-        PATH: PATH + ':' + HOME + '/amazon-corretto-8.202.08.2-linux-x64/bin'
-      },
-      cwd: entrypointDirname,
-      stdio: 'inherit'
-    });
-  } catch (err) {
-    console.error('failed to `npx shadow-cljs release haikus`'); // TODO: read from edn
-    throw err;
-  }
-
-  const { stdout } = await execa('ls', {
-    cwd: entrypointDirname,
-    stdio: 'inherit'
-  });
-
-  console.log(stdout);
 
   const launcherPath = path.join(__dirname, 'launcher.js');
-
   let launcherData = await fs.readFile(launcherPath, 'utf8');
 
   launcherData = launcherData.replace(
@@ -96,11 +75,11 @@ exports.build = async ({ files, entrypoint, workPath } = {}) => {
 
   const preparedFiles = {
     'launcher.js': new FileBlob({ data: launcherData }),
-    'bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
+    'bridge.js': new FileFsRef({ fsPath: nodeBridge }),
     'index.js': new FileFsRef({
       fsPath: require.resolve(
-        path.join(entrypointDirname, 'api/haikus/index.js')
-      ) // TODO: read from edn
+        path.join(entrypointDirname, buildConfig.outputTo)
+      )
     })
   };
 
@@ -110,5 +89,66 @@ exports.build = async ({ files, entrypoint, workPath } = {}) => {
     runtime: 'nodejs8.10'
   });
 
-  return { [entrypoint]: lambda };
+  lambdas[buildConfig.outputTo] = lambda;
+}
+
+async function createLambdaForStatic(buildConfig, lambdas) {}
+
+const lambdaBuilders = {
+  browser: createLambdaForStatic,
+  'node-library': createLambdaForNode
+};
+
+exports.build = async ({ files, entrypoint, workPath } = {}) => {
+  const { HOME, PATH } = process.env;
+  const { files: downloadedFiles } = await downloadFiles(
+    files,
+    entrypoint,
+    workPath
+  );
+
+  await installJava();
+  await installDependencies(downloadedFiles, workPath);
+
+  const input = downloadedFiles[entrypoint].fsPath;
+  const buildConfigs = await parseConfigFile(input);
+
+  try {
+    await execa(
+      'npx',
+      // ['shadow-cljs', 'release', ...buildConfigs.map(b => b.name)],
+      ['shadow-cljs', 'release', 'haikus'],
+      {
+        env: {
+          JAVA_HOME: `${HOME}/amazon-corretto-8.202.08.2-linux-x64`,
+          PATH: `${PATH}:${HOME}/amazon-corretto-8.202.08.2-linux-x64/bin`,
+          M2: `${workPath}.m2`
+        },
+        cwd: workPath,
+        stdio: 'inherit'
+      }
+    );
+  } catch (err) {
+    console.error('Failed to `npx shadow-cljs release ...`');
+    throw err;
+  }
+
+  const { stdout } = await execa('ls', ['-a'], {
+    cwd: workPath,
+    stdio: 'inherit'
+  });
+
+  console.log(stdout);
+
+  const lambdas = {};
+
+  await Promise.all(
+    buildConfigs.map(buildConfig =>
+      lambdaBuilders[buildConfig.target](buildConfig, lambdas, workPath)
+    )
+  );
+
+  console.log('lambdas', lambdas);
+
+  return lambdas;
 };
