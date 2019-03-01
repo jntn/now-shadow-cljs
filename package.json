@@ -1,13 +1,14 @@
 {
-  "name": "now-shadow-cljs-node",
-  "version": "0.0.38",
+  "name": "@jntn/now-shadow-cljs",
+  "version": "0.0.1",
   "license": "MIT",
+  "description": "A now builder for ClojureScript projects using shadow-cljs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jntn/now-shadow-cljs-node.git"
+    "url": "https://github.com/jntn/now-shadow-cljs.git"
   },
   "scripts": {
-    "test": "jest --watch"
+    "test": "jest"
   },
   "dependencies": {
     "@now/node-bridge": "^0.1.11-canary.0",
