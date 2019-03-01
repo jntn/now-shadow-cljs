@@ -1,7 +1,5 @@
-/* eslint-disable implicit-arrow-linebreak */
-/* eslint-disable comma-dangle  */
-/* eslint-disable ßfunction-paren-newline */
 /* eslint-disable no-param-reassign */
+/* eslint-disable no-console */
 
 const { createLambda } = require('@now/build-utils/lambda.js');
 const download = require('@now/build-utils/fs/download.js');
@@ -19,8 +17,7 @@ const fetch = require('node-fetch');
 
 const parseConfigFile = require('./parse-config-file');
 
-const javaUrl =
-  'https://d2znqt9b1bc64u.cloudfront.net/amazon-corretto-8.202.08.2-linux-x64.tar.gz';
+const javaUrl = 'https://d2znqt9b1bc64u.cloudfront.net/amazon-corretto-8.202.08.2-linux-x64.tar.gz';
 
 async function installJava() {
   console.log('Downloading java...');
@@ -57,10 +54,8 @@ async function downloadFiles(files, entrypoint, workPath) {
   return { files: downloadedFiles, entryPath };
 }
 
-async function createLambdaForNode(buildConfig, lambdas, entrypointDirname) {
-  console.log(
-    `Creating lambda for ${buildConfig.name} (${buildConfig.target})`
-  );
+async function createLambdaForNode(buildConfig, lambdas, workPath) {
+  console.log(`Creating lambda for ${buildConfig.name} (${buildConfig.target})`);
 
   const launcherPath = path.join(__dirname, 'launcher.js');
   let launcherData = await fs.readFile(launcherPath, 'utf8');
@@ -77,9 +72,7 @@ async function createLambdaForNode(buildConfig, lambdas, entrypointDirname) {
     'launcher.js': new FileBlob({ data: launcherData }),
     'bridge.js': new FileFsRef({ fsPath: nodeBridge }),
     'index.js': new FileFsRef({
-      fsPath: require.resolve(
-        path.join(entrypointDirname, buildConfig.outputTo)
-      )
+      fsPath: require.resolve(path.join(workPath, buildConfig.outputTo))
     })
   };
 
@@ -92,7 +85,16 @@ async function createLambdaForNode(buildConfig, lambdas, entrypointDirname) {
   lambdas[buildConfig.outputTo] = lambda;
 }
 
-async function createLambdaForStatic(buildConfig, lambdas) {}
+async function createLambdaForStatic(buildConfig, lambdas, workPath) {
+  console.log(`Creating lambda for ${buildConfig.name} (${buildConfig.target})`);
+
+  // Try to compute folder to serve. Can be done better?
+  const publicPath = buildConfig.outputDir.replace(buildConfig.assetPath, '');
+
+  const files = await glob('**', path.join(workPath, publicPath));
+
+  Object.assign(lambdas, files);
+}
 
 const lambdaBuilders = {
   browser: createLambdaForStatic,
@@ -101,37 +103,8 @@ const lambdaBuilders = {
 
 exports.build = async ({ files, entrypoint, workPath } = {}) => {
   const { HOME, PATH } = process.env;
-  const { files: downloadedFiles } = await downloadFiles(
-    files,
-    entrypoint,
-    workPath
-  );
 
-  await installJava();
-  await installDependencies(downloadedFiles, workPath);
-
-  const input = downloadedFiles[entrypoint].fsPath;
-  const buildConfigs = await parseConfigFile(input);
-
-  try {
-    await execa(
-      'npx',
-      // ['shadow-cljs', 'release', ...buildConfigs.map(b => b.name)],
-      ['shadow-cljs', 'release', 'haikus'],
-      {
-        env: {
-          JAVA_HOME: `${HOME}/amazon-corretto-8.202.08.2-linux-x64`,
-          PATH: `${PATH}:${HOME}/amazon-corretto-8.202.08.2-linux-x64/bin`,
-          M2: `${workPath}.m2`
-        },
-        cwd: workPath,
-        stdio: 'inherit'
-      }
-    );
-  } catch (err) {
-    console.error('Failed to `npx shadow-cljs release ...`');
-    throw err;
-  }
+  const { files: downloadedFiles } = await downloadFiles(files, entrypoint, workPath);
 
   const { stdout } = await execa('ls', ['-a'], {
     cwd: workPath,
@@ -140,15 +113,55 @@ exports.build = async ({ files, entrypoint, workPath } = {}) => {
 
   console.log(stdout);
 
+  await installJava();
+  await installDependencies(downloadedFiles, workPath);
+
+  const input = downloadedFiles[entrypoint].fsPath;
+  const buildConfigs = await parseConfigFile(input);
+
+  try {
+    await execa('npx', ['shadow-cljs', 'release', ...buildConfigs.map(b => b.name)], {
+      env: {
+        JAVA_HOME: `${HOME}/amazon-corretto-8.202.08.2-linux-x64`,
+        PATH: `${PATH}:${HOME}/amazon-corretto-8.202.08.2-linux-x64/bin`,
+        M2: `${workPath}.m2`
+      },
+      cwd: workPath,
+      stdio: 'inherit'
+    });
+  } catch (err) {
+    console.error('Failed to `npx shadow-cljs release ...`');
+    throw err;
+  }
+
   const lambdas = {};
 
   await Promise.all(
-    buildConfigs.map(buildConfig =>
+    buildConfigs.map(async buildConfig =>
       lambdaBuilders[buildConfig.target](buildConfig, lambdas, workPath)
     )
   );
 
-  console.log('lambdas', lambdas);
-
   return lambdas;
+};
+
+exports.prepareCache = async ({ cachePath, workPath }) => {
+  console.log('Preparing cache...');
+
+  ['.m2', '.shadow-cljs', 'node_modules'].forEach(folder => {
+    const p = path.join(workPath, folder);
+    const cp = path.join(cachePath, folder);
+
+    if (fs.existsSync(p)) {
+      console.log(`Caching ${folder} folder`);
+      fs.removeSync(cp);
+      fs.renameSync(p, cp);
+    }
+  });
+
+  return {
+    ...(await glob('.m2/**', cachePath)),
+    ...(await glob('.shadow-cljs/**', cachePath)),
+    ...(await glob('node_modules/**', cachePath))
+  };
 };
