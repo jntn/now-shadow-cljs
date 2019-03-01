@@ -7,6 +7,11 @@
     "type": "git",
     "url": "https://github.com/jntn/now-shadow-cljs.git"
   },
+  "files": [
+    "index.js",
+    "parse-config-file.js",
+    "launcher.js"
+  ],
   "scripts": {
     "test": "jest"
   },
