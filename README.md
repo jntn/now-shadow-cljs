@@ -19,9 +19,6 @@ For an example using both browser and node builds, see [github.com/jntn/haiku](h
 }
 ```
 
-## Tips
-To speed up build time set `:local-repo ".m2"` in `shadow-cljs.edn`. The builder will then try to cache the clojure dependencies between builds.
-
 ## Caveats
 * Right now the only supported build targets are `:browser` and `:node-script`.
 * The builder does not currently work with `:deps true` in `shadow-cljs.edn`
