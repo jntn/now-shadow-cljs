@@ -1,3 +1,4 @@
+/* eslint-disable import/no-unresolved */
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-console */
 
@@ -88,10 +89,10 @@ async function createLambdaForNode(buildConfig, lambdas, workPath) {
 async function createLambdaForStatic(buildConfig, lambdas, workPath) {
   console.log(`Creating lambda for ${buildConfig.name} (${buildConfig.target})`);
 
-  // Try to compute folder to serve. Can be done better?
-  const publicPath = buildConfig.outputDir.replace(buildConfig.assetPath, '');
+  // Try to compute folder to serve.
+  const outputPath = buildConfig.outputDir.replace(buildConfig.assetPath, '');
 
-  const files = await glob('**', path.join(workPath, publicPath));
+  const files = await glob(path.join(outputPath, '**'), workPath);
 
   Object.assign(lambdas, files);
 }
@@ -147,7 +148,6 @@ exports.build = async ({ files, entrypoint, workPath } = {}) => {
 
 exports.prepareCache = async ({ cachePath, workPath }) => {
   console.log('Preparing cache...');
-
   ['.m2', '.shadow-cljs', 'node_modules'].forEach(folder => {
     const p = path.join(workPath, folder);
     const cp = path.join(cachePath, folder);
