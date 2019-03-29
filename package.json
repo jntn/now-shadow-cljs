@@ -12,6 +12,9 @@
     "parse-config-file.js",
     "launcher.js"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "jest"
   },
