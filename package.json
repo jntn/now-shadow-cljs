@@ -1,6 +1,6 @@
 {
   "name": "@jntn/now-shadow-cljs",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "license": "MIT",
   "description": "A now builder for ClojureScript projects using shadow-cljs",
   "repository": {
