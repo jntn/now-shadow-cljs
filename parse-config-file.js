@@ -5,6 +5,11 @@ const edn = require('jsedn');
 
 const supportedBuildTypes = [':browser', ':node-library'];
 
+// Handle/ignore shadow/env tagged value
+edn.setTagAction(new edn.Tag('shadow', 'env'), (obj) => {
+  return obj;
+});
+
 function keywordToString(kw) {
   return kw && kw.replace(':', '');
 }
@@ -17,7 +22,7 @@ async function parseAndFilterShadowCljsBuilds(input) {
   const shadowCljsConfig = edn.toJS(edn.parse(entrypointFile));
 
   // Filter builds that are supported by this builder
-  const supportedBuildConfigs = Object.entries(shadowCljsConfig[':builds']).filter(([_, config]) =>
+  const supportedBuildConfigs = Object.entries(shadowCljsConfig[':builds']).filter(([, config]) =>
     supportedBuildTypes.includes(config[':target'])
   );
 
@@ -26,7 +31,7 @@ async function parseAndFilterShadowCljsBuilds(input) {
     target: keywordToString(config[':target']),
     assetPath: config[':asset-path'],
     outputDir: config[':output-dir'],
-    outputTo: config[':output-to']
+    outputTo: config[':output-to'],
   }));
 }
 
