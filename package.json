@@ -1,8 +1,15 @@
 {
   "name": "@jntn/now-shadow-cljs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
-  "description": "A now builder for ClojureScript projects using shadow-cljs",
+  "description": "A Vercel now builder for ClojureScript projects using shadow-cljs",
+  "keywords": [
+    "now",
+    "clojure",
+    "shadow-cljs",
+    "vercel",
+    "clojurescript"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/jntn/now-shadow-cljs.git"
