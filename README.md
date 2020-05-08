@@ -1,11 +1,11 @@
 # now-shadow-cljs
-A ▲ Now 2.0 builder for ClojureScript projects using shadow-clj. The builder will build your shadow-cljs targets and deploy them to ▲ Now.
+A ▲ Vercel Now 2.0 builder for ClojureScript projects using shadow-clj. The builder will build your shadow-cljs targets and deploy them to ▲ Vercel Now.
 
 ## Usage
 
 1. Create a shadow-cljs project. This builder supports building `:browser` and `:node-library` targets. If the target is `:browser` it will be deployed as a static page and if it is `:node-library` it will be deployed as a lambda function.
 
-2. Write a `now.json` file that uses `@jntn/now-shadow-cljs`. **Note:** If you do not specify a `routes` section, the build output will be available under the specified output folder. For `:node-library` it is the `:output-to` path and for `:browser` it is the `:output-dir` path.
+2. Create a `now.json` file that uses `@jntn/now-shadow-cljs` using version 2 (This builder does not currently work with the latest version 3). **Note:** If you do not specify a `routes` section, the build output will be available under the specified output folder. For `:node-library` it is the `:output-to` path and for `:browser` it is the `:output-dir` path.
 
 For an example using both browser and node builds, see [github.com/jntn/haiku](https://github.com/jntn/haiku)
 
