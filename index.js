@@ -18,7 +18,8 @@ const fetch = require('node-fetch');
 
 const parseConfigFile = require('./parse-config-file');
 
-const javaUrl = 'https://d2znqt9b1bc64u.cloudfront.net/amazon-corretto-8.202.08.2-linux-x64.tar.gz';
+const javaVersion = '8.242.07.1';
+const javaUrl = `https://corretto.aws/downloads/resources/${javaVersion}/amazon-corretto-${javaVersion}-linux-x64.tar.gz`;
 
 async function installJava() {
   console.log('Downloading java...');
@@ -80,7 +81,7 @@ async function createLambdaForNode(buildConfig, lambdas, workPath) {
   const lambda = await createLambda({
     files: { ...preparedFiles },
     handler: 'launcher.launcher',
-    runtime: 'nodejs8.10'
+    runtime: 'nodejs12.x'
   });
 
   lambdas[buildConfig.outputTo] = lambda;
@@ -123,8 +124,8 @@ exports.build = async ({ files, entrypoint, workPath } = {}) => {
   try {
     await execa('npx', ['shadow-cljs', 'release', ...buildConfigs.map(b => b.name)], {
       env: {
-        JAVA_HOME: `${HOME}/amazon-corretto-8.202.08.2-linux-x64`,
-        PATH: `${PATH}:${HOME}/amazon-corretto-8.202.08.2-linux-x64/bin`,
+        JAVA_HOME: `${HOME}/amazon-corretto-${javaVersion}-linux-x64`,
+        PATH: `${PATH}:${HOME}/amazon-corretto-${javaVersion}-linux-x64/bin`,
         M2: `${workPath}.m2`
       },
       cwd: workPath,
