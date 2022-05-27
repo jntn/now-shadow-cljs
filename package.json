@@ -28,7 +28,7 @@
   "dependencies": {
     "@now/node-bridge": "^0.1.11-canary.0",
     "execa": "^1.0.0",
-    "fs-extra": "7.0.1",
+    "fs-extra": "^8.0.0",
     "jsedn": "^0.4.1",
     "node-fetch": "^2.3.0",
     "tar": "^4.4.8"
